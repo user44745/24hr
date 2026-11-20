@@ -1,0 +1,2404 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ประมูลเวลา 24 ชั่วโมง - เกมทักษะชีวิต (Time Auction)</title>
+  <style>
+    /* ==========================================================================
+       1. DESIGN TOKENS & BASE STYLES (ธีมฟาร์มชนบทสดใส & ระบบสีพาสเทล)
+       ========================================================================== */
+    :root {
+      --sky-top: #38bdf8;
+      --sky-bottom: #e0f2fe;
+      --grass-light: #86efac;
+      --grass-main: #22c55e;
+      --grass-dark: #15803d;
+      --wood-light: #d97706;
+      --wood-main: #b45309;
+      --wood-dark: #78350f;
+      --cream-bg: #fffbeb;
+      --card-bg: #ffffff;
+      --pastel-yellow: #fef08a;
+      --pastel-orange: #fed7aa;
+      --pastel-pink: #fbcfe8;
+      --pastel-blue: #bae6fd;
+      --pastel-green: #bbf7d0;
+      --health-color: #ef4444;
+      --study-color: #3b82f6;
+      --happy-color: #f59e0b;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.08);
+      --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.12);
+      --shadow-lg: 0 14px 32px rgba(15, 23, 42, 0.18);
+      --radius-md: 14px;
+      --radius-lg: 22px;
+      --radius-full: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Sarabun', 'Kanit', 'Noto Sans Thai', 'Tahoma', system-ui, -apple-system, sans-serif;
+      color: var(--text-main);
+      background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 62%, var(--grass-light) 62%, var(--grass-main) 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* ==========================================================================
+       2. ANIMATED FARM BACKGROUND (ฉากหลังฟาร์มท้องฟ้า เมฆนาฬิกา และทุ่งหญ้า)
+       ========================================================================== */
+    .farm-backdrop {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .sun-glow {
+      position: absolute;
+      top: 28px;
+      right: 6%;
+      width: 84px;
+      height: 84px;
+      background: radial-gradient(circle, #fef08a 30%, #facc15 70%, rgba(250, 204, 21, 0) 100%);
+      border-radius: 50%;
+      animation: pulseSun 4s ease-in-out infinite;
+    }
+
+    @keyframes pulseSun {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .cloud {
+      position: absolute;
+      opacity: 0.9;
+      animation: floatCloud linear infinite;
+    }
+
+    .cloud-1 { top: 45px; left: -160px; animation-duration: 38s; }
+    .cloud-2 { top: 105px; left: -220px; animation-duration: 52s; animation-delay: 8s; transform: scale(0.85); }
+
+    @keyframes floatCloud {
+      from { transform: translateX(-180px); }
+      to { transform: translateX(calc(100vw + 240px)); }
+    }
+
+    .hill-back {
+      position: absolute;
+      bottom: 18%;
+      left: -10%;
+      width: 65%;
+      height: 220px;
+      background: #4ade80;
+      border-radius: 50% 50% 0 0;
+    }
+
+    .hill-front {
+      position: absolute;
+      bottom: 12%;
+      right: -12%;
+      width: 75%;
+      height: 210px;
+      background: #22c55e;
+      border-radius: 50% 50% 0 0;
+    }
+
+    /* ==========================================================================
+       3. APP CONTAINER & TOP BAR
+       ========================================================================== */
+    .app-wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 14px 16px 36px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-sm);
+      border: 2px solid #bae6fd;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: var(--wood-dark);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ==========================================================================
+       4. BUTTONS & INTERACTIVE ELEMENTS
+       ========================================================================== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      border-radius: var(--radius-full);
+      padding: 10px 18px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.14s ease, box-shadow 0.14s ease, background-color 0.15s ease;
+      user-select: none;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      box-shadow: 0 4px 0 #92400e;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #fff;
+      box-shadow: 0 4px 0 #166534;
+    }
+
+    .btn-info {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: #fff;
+      box-shadow: 0 4px 0 #075985;
+    }
+
+    .btn-soft {
+      background: #f1f5f9;
+      color: var(--text-main);
+      border: 1px solid #cbd5e1;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+    }
+
+    .btn-danger-soft {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .btn-lg {
+      padding: 14px 28px;
+      font-size: 1.12rem;
+    }
+
+    /* ==========================================================================
+       5. SCREENS & CARDS
+       ========================================================================== */
+    .screen {
+      display: none;
+      animation: fadeSlideIn 0.32s ease;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-card {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-lg);
+      border: 3px solid #fde68a;
+    }
+
+    /* Start Screen Hero */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    @media (max-width: 780px) {
+      .hero-grid { grid-template-columns: 1fr; }
+    }
+
+    .hero-title {
+      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+      font-weight: 900;
+      color: var(--wood-dark);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .hero-subtitle {
+      font-size: 1.05rem;
+      color: #475569;
+      margin-bottom: 18px;
+    }
+
+    .pill-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .pill-tag {
+      background: var(--pastel-green);
+      color: #14532d;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    /* Level & Character Selection */
+    .selector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin: 14px 0 20px;
+    }
+
+    .select-box {
+      background: #fffbeb;
+      border: 2px solid #fde68a;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      position: relative;
+    }
+
+    .select-box:hover:not(.locked) {
+      border-color: #f59e0b;
+      transform: translateY(-2px);
+    }
+
+    .select-box.selected {
+      background: #fef3c7;
+      border-color: #d97706;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+    }
+
+    .select-box.locked {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .mascot-stage {
+      background: linear-gradient(180deg, #e0f2fe 0%, #dcfce7 100%);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      text-align: center;
+      border: 3px dashed #86efac;
+      position: relative;
+    }
+
+    /* ==========================================================================
+       6. HUD & VITAL BARS (แถบสถานะพลังชีวิต 3 ด้าน + เหรียญเวลา 24 เหรียญ)
+       ========================================================================== */
+    .hud-bar {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr 1fr;
+      gap: 12px;
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      box-shadow: var(--shadow-md);
+      border: 2px solid #fde68a;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+
+    @media (max-width: 820px) {
+      .hud-bar { grid-template-columns: 1fr; }
+    }
+
+    .coin-wallet {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #fef9c3, #fde047);
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 2px solid #eab308;
+    }
+
+    .coin-count {
+      font-size: 1.55rem;
+      font-weight: 900;
+      color: #854d0e;
+      line-height: 1.1;
+    }
+
+    .vital-meters {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .meter-item {
+      background: #f8fafc;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .meter-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .meter-track {
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .score-hud {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .score-pill {
+      background: #eff6ff;
+      border: 2px solid #93c5fd;
+      color: #1e40af;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-weight: 800;
+      text-align: center;
+    }
+
+    /* ==========================================================================
+       7. AUCTION STAGE (ลานประมูลไม้กลางฟาร์ม)
+       ========================================================================== */
+    .auction-layout {
+      display: grid;
+      grid-template-columns: 1.35fr 0.85fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 840px) {
+      .auction-layout { grid-template-columns: 1fr; }
+    }
+
+    .wooden-stage {
+      background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+      border: 4px solid #b45309;
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stage-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #92400e;
+      color: #fef3c7;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+    }
+
+    .timer-badge {
+      background: #fef08a;
+      color: #854d0e;
+      padding: 3px 12px;
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-badge.urgent {
+      background: #ef4444;
+      color: #ffffff;
+      animation: pulseUrgent 0.6s infinite;
+    }
+
+    @keyframes pulseUrgent {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .auction-card-showcase {
+      background: #ffffff;
+      border: 3px solid #f59e0b;
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .eisenhower-tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.78rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .tag-q1 { background: #fee2e2; color: #991b1b; }
+    .tag-q2 { background: #dcfce7; color: #166534; }
+    .tag-q3 { background: #fef3c7; color: #92400e; }
+    .tag-q4 { background: #f1f5f9; color: #475569; }
+
+    .item-icon-large {
+      font-size: 3.2rem;
+      margin: 4px 0;
+      display: inline-block;
+      animation: bounceGentle 2.4s ease-in-out infinite;
+    }
+
+    @keyframes bounceGentle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .bid-status-box {
+      display: flex;
+      justify-content: space-around;
+      background: #f8fafc;
+      border-radius: var(--radius-md);
+      padding: 10px;
+      margin: 12px 0;
+      border: 1px dashed #cbd5e1;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Drag & Drop Podium Target */
+    .podium-dropzone {
+      border: 2px dashed #d97706;
+      background: rgba(254, 243, 199, 0.65);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #92400e;
+      transition: all 0.2s ease;
+    }
+
+    .podium-dropzone.drag-over {
+      background: #fde047;
+      border-style: solid;
+      transform: scale(1.02);
+    }
+
+    .draggable-coin {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #facc15;
+      color: #713f12;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-weight: 900;
+      cursor: grab;
+      box-shadow: 0 3px 0 #a16207;
+    }
+
+    .bid-controls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* Bot Competitors & Live Feed */
+    .side-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bots-card, .inventory-card {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      box-shadow: var(--shadow-md);
+      border: 2px solid #bae6fd;
+    }
+
+    .bot-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: #f8fafc;
+      margin-top: 6px;
+      font-size: 0.88rem;
+    }
+
+    .bot-row.leading {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      font-weight: 800;
+    }
+
+    .won-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      min-height: 44px;
+    }
+
+    .won-chip {
+      background: #dcfce7;
+      border: 1px solid #86efac;
+      color: #14532d;
+      padding: 5px 10px;
+      border-radius: var(--radius-full);
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Floating Visual Reward Animation */
+    .floating-reward {
+      position: fixed;
+      left: 50%;
+      top: 45%;
+      transform: translate(-50%, -50%);
+      font-size: 4rem;
+      z-index: 999;
+      pointer-events: none;
+      animation: floatUpFade 1.4s ease-out forwards;
+      text-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    @keyframes floatUpFade {
+      0% { opacity: 0; transform: translate(-50%, 10px) scale(0.7); }
+      25% { opacity: 1; transform: translate(-50%, -20px) scale(1.15); }
+      100% { opacity: 0; transform: translate(-50%, -110px) scale(1); }
+    }
+
+    /* Toast Feedback Banner */
+    .feedback-banner {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 0.92rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #eff6ff;
+      border-left: 5px solid #3b82f6;
+      color: #1e3a8a;
+    }
+
+    .feedback-banner.warn {
+      background: #fef2f2;
+      border-left-color: #ef4444;
+      color: #991b1b;
+    }
+
+    .feedback-banner.good {
+      background: #f0fdf4;
+      border-left-color: #22c55e;
+      color: #14532d;
+    }
+
+    /* ==========================================================================
+       8. PHASE 2: DRAG & DROP 8-8-8 DAILY PLANNER
+       ========================================================================== */
+    .planner-zones {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    @media (max-width: 780px) {
+      .planner-zones { grid-template-columns: 1fr; }
+    }
+
+    .zone-box {
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      min-height: 170px;
+      border: 3px dashed #cbd5e1;
+      transition: all 0.2s ease;
+    }
+
+    .zone-box.zone-rest { background: #eff6ff; border-color: #93c5fd; }
+    .zone-box.zone-work { background: #fefce8; border-color: #fde047; }
+    .zone-box.zone-life { background: #fdf2f8; border-color: #f9a8d4; }
+    .zone-box.drag-over { transform: scale(1.02); border-style: solid; }
+
+    .tray-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px;
+      background: #f8fafc;
+      border-radius: var(--radius-md);
+      border: 2px solid #e2e8f0;
+      min-height: 76px;
+    }
+
+    .plan-card {
+      background: #ffffff;
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: grab;
+      box-shadow: var(--shadow-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .plan-card.selected-card {
+      background: #fef08a;
+      border-color: #b45309;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
+    }
+
+    /* ==========================================================================
+       9. PHASE 3: INTERACTIVE PLOT TWIST & PHASE 4: DASHBOARD SUMMARY
+       ========================================================================== */
+    .twist-card {
+      background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+      border: 3px solid #f43f5e;
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .choice-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #ffffff;
+      border: 2px solid #fda4af;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-top: 10px;
+      font-family: inherit;
+      font-size: 0.96rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .choice-btn:hover {
+      background: #fff1f2;
+      border-color: #e11d48;
+      transform: translateX(4px);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 820px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    .pie-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f8fafc;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      border: 2px solid #e2e8f0;
+    }
+
+    .legend-list {
+      width: 100%;
+      margin-top: 12px;
+      display: grid;
+      gap: 6px;
+      font-size: 0.86rem;
+    }
+
+    .legend-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    /* ==========================================================================
+       10. MODALS (คู่มือวิธีเล่น, คลังความรู้ทักษะชีวิต, ตาราง High Score)
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      max-width: 680px;
+      width: 100%;
+      max-height: 86vh;
+      overflow-y: auto;
+      padding: 22px;
+      border: 3px solid #fde68a;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .matrix-grid { grid-template-columns: 1fr; }
+    }
+
+    .matrix-cell {
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       ฉากหลังฟาร์มชนบทสดใส (SVG Vector Background)
+       ======================================================================== -->
+  <div class="farm-backdrop" aria-hidden="true">
+    <div class="sun-glow"></div>
+    <!-- เมฆนาฬิกาก้อนที่ 1 -->
+    <svg class="cloud cloud-1" width="150" height="80" viewBox="0 0 150 80">
+      <path d="M35 65h80a22 22 0 0 0 4-43 30 30 0 0 0-58-6 24 24 0 0 0-26 49z" fill="#ffffff"/>
+      <circle cx="78" cy="42" r="14" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2.5"/>
+      <path d="M78 34v8l5 4" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    </svg>
+    <!-- เมฆนาฬิกาก้อนที่ 2 -->
+    <svg class="cloud cloud-2" width="140" height="75" viewBox="0 0 150 80">
+      <path d="M35 65h80a22 22 0 0 0 4-43 30 30 0 0 0-58-6 24 24 0 0 0-26 49z" fill="#ffffff"/>
+    </svg>
+    <div class="hill-back"></div>
+    <div class="hill-front"></div>
+  </div>
+
+  <div class="app-wrapper">
+    <!-- ======================================================================
+         แถบเมนูด้านบน (Top Navigation Bar)
+         ====================================================================== -->
+    <header class="top-navbar">
+      <div class="brand-badge">
+        <span style="font-size: 1.5rem;">🐶⏰</span>
+        <span>ประมูลเวลา 24 ชั่วโมง <small style="color:#0284c7; font-weight:700;">(Time Auction)</small></span>
+      </div>
+      <div class="nav-actions">
+        <button class="btn btn-soft" onclick="openModal('modal-howto')">📖 วิธีเล่น</button>
+        <button class="btn btn-soft" onclick="openModal('modal-knowledge')">🧠 คลังความรู้ 8-8-8</button>
+        <button class="btn btn-soft" onclick="openModal('modal-scores')">🏆 สถิติสูงสุด</button>
+        <button class="btn btn-soft" id="btn-sound" onclick="toggleSound()">🔊 เสียง: เปิด</button>
+      </div>
+    </header>
+
+    <!-- ======================================================================
+         หน้าจอที่ 1: หน้าต้อนรับ (Start Screen)
+         ====================================================================== -->
+    <main id="screen-start" class="screen active">
+      <div class="panel-card">
+        <div class="hero-grid">
+          <div>
+            <div class="pill-tags">
+              <span class="pill-tag">🌱 ทักษะชีวิต ม.1–ม.3</span>
+              <span class="pill-tag">⚖️ สูตรสมดุล 8-8-8</span>
+              <span class="pill-tag">🎯 กฎ 80/20 & Eisenhower</span>
+            </div>
+            <h1 class="hero-title">ลานประมูลเวลา 24 ชั่วโมง</h1>
+            <p class="hero-subtitle">
+              ทุกคนมีเหรียญเวลาเริ่มต้นเท่ากันคนละ <strong>24 เหรียญ</strong> (แทน 24 ชั่วโมงใน 1 วัน) 
+              มาวางแผนประมูลกิจกรรมสำคัญ จัดตารางชีวิตให้สมดุล และเอาตัวรอดจากเหตุการณ์ไม่คาดฝันไปกับ <strong>"น้องหมานักบริหารเวลา"</strong>!
+            </p>
+
+            <h3 style="font-size:1rem; color:#78350f; margin-bottom:6px;">1. เลือกระดับความท้าทาย (3 ด่าน):</h3>
+            <div class="selector-grid" id="level-selector"></div>
+
+            <h3 style="font-size:1rem; color:#78350f; margin-bottom:6px;">2. เลือกชุดตัวละครน้องหมา (ปลดล็อกเมื่อผ่านด่าน):</h3>
+            <div class="selector-grid" id="character-selector"></div>
+
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
+              <button class="btn btn-primary btn-lg" onclick="startGame()">🚜 เข้าสู่ลานประมูลเริ่มเกม!</button>
+            </div>
+          </div>
+
+          <div class="mascot-stage">
+            <div id="start-mascot-svg"></div>
+            <div style="margin-top:10px; background:#fff; padding:10px 14px; border-radius:14px; border:2px solid #86efac;">
+              <strong style="color:#15803d;">คำทักทายจากน้องหมา:</strong>
+              <p style="font-size:0.9rem; color:#334155; margin-top:4px;">
+                "โฮ่ง! เวลา 24 ชั่วโมงซื้อเพิ่มไม่ได้นะ เลือกประมูลกิจกรรมที่สร้างคุณค่าให้ชีวิต อย่าเผลอใช้เหรียญหมดไปกับเรื่องไร้สาระล่ะ!"
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ======================================================================
+         หน้าจอที่ 2: ลานประมูลเวลา (Phase 1 - Live Auction Gameplay)
+         ====================================================================== -->
+    <section id="screen-auction" class="screen">
+      <!-- แถบสถานะ HUD -->
+      <div class="hud-bar">
+        <div class="coin-wallet">
+          <svg width="42" height="42" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="21" fill="#facc15" stroke="#ca8a04" stroke-width="3"/>
+            <circle cx="24" cy="24" r="15" fill="none" stroke="#fef08a" stroke-width="2" stroke-dasharray="4 3"/>
+            <text x="24" y="29" text-anchor="middle" font-size="15" font-weight="900" fill="#713f12">24H</text>
+          </svg>
+          <div>
+            <div style="font-size:0.78rem; font-weight:800; color:#854d0e;">เหรียญเวลาคงเหลือ</div>
+            <div class="coin-count"><span id="hud-coins">24</span> <small style="font-size:0.9rem;">เหรียญ</small></div>
+          </div>
+        </div>
+
+        <div class="vital-meters">
+          <div class="meter-item">
+            <div class="meter-header" style="color:#dc2626;"><span>❤️ สุขภาพ</span><span id="val-health">40%</span></div>
+            <div class="meter-track"><div id="bar-health" class="meter-fill" style="width:40%; background:var(--health-color);"></div></div>
+          </div>
+          <div class="meter-item">
+            <div class="meter-header" style="color:#2563eb;"><span>📚 การเรียน</span><span id="val-study">40%</span></div>
+            <div class="meter-track"><div id="bar-study" class="meter-fill" style="width:40%; background:var(--study-color);"></div></div>
+          </div>
+          <div class="meter-item">
+            <div class="meter-header" style="color:#d97706;"><span>😊 ความสุข</span><span id="val-happy">40%</span></div>
+            <div class="meter-track"><div id="bar-happy" class="meter-fill" style="width:40%; background:var(--happy-color);"></div></div>
+          </div>
+        </div>
+
+        <div class="score-hud">
+          <div class="score-pill">
+            <div style="font-size:0.72rem;">คะแนนคุณภาพชีวิต</div>
+            <div style="font-size:1.2rem;" id="hud-score">0</div>
+          </div>
+          <button class="btn btn-info" id="btn-hint" onclick="useTimeAdvisor()" title="ใช้ได้ 1 ครั้งต่อด่าน (-2 คะแนน)">
+            💡 ที่ปรึกษาเวลา
+          </button>
+        </div>
+      </div>
+
+      <!-- พื้นที่ลานประมูลหลัก -->
+      <div class="auction-layout">
+        <div class="wooden-stage">
+          <div class="stage-banner">
+            <span id="round-indicator">รายการที่ 1 / 7</span>
+            <span id="level-badge-name">ด่านที่ 1: วันเรียนสดใสในฟาร์ม</span>
+            <span class="timer-badge" id="auction-timer">⏱️ 25 วิ</span>
+          </div>
+
+          <div class="auction-card-showcase" id="auction-card-box">
+            <span class="eisenhower-tag tag-q2" id="item-matrix-tag">สำคัญ & ไม่เร่งด่วน</span>
+            <div><span class="item-icon-large" id="item-icon">🛏️</span></div>
+            <h2 id="item-title" style="font-size:1.4rem; color:#1e293b;">นอนหลับสนิท 8 ชั่วโมง</h2>
+            <p id="item-desc" style="font-size:0.92rem; color:#475569; margin-top:4px;">ฟื้นฟูร่างกายและสมอง ป้องกันการล้มป่วยเมื่อเจองานด่วน</p>
+
+            <div class="bid-status-box">
+              <div>
+                <div style="font-size:0.76rem; color:#64748b;">ราคาประมูลปัจจุบัน</div>
+                <div style="font-size:1.25rem; font-weight:900; color:#b45309;"><span id="current-bid">4</span> เหรียญ</div>
+              </div>
+              <div>
+                <div style="font-size:0.76rem; color:#64748b;">ผู้เสนอราคาสูงสุด</div>
+                <div style="font-size:1.05rem; font-weight:800; color:#0284c7;" id="highest-bidder">ราคาเริ่มต้น</div>
+              </div>
+              <div>
+                <div style="font-size:0.76rem; color:#64748b;">ใช้เวลาจริง / สิทธิ์</div>
+                <div style="font-size:1.05rem; font-weight:800; color:#15803d;"><span id="item-hours">8</span> ชม. (<span id="item-slots">2</span> สิทธิ์)</div>
+              </div>
+            </div>
+
+            <!-- โซนลากเหรียญวางประมูล (Drag & Drop Coin) -->
+            <div class="podium-dropzone" id="podium-dropzone"
+                 ondragover="handleCoinDragOver(event)"
+                 ondragleave="handleCoinDragLeave(event)"
+                 ondrop="handleCoinDrop(event)">
+              <span class="draggable-coin" draggable="true" ondragstart="handleCoinDragStart(event)">🪙 ลากเหรียญนี้</span>
+              <span>มาวางบนแท่นประมูล หรือกดปุ่มเสนอราคาด้านล่าง</span>
+            </div>
+
+            <div class="bid-controls">
+              <button class="btn btn-primary" id="btn-bid-1" onclick="placePlayerBid(1)">🔨 เสนอราคา (+1 เหรียญ)</button>
+              <button class="btn btn-success" id="btn-bid-2" onclick="placePlayerBid(2)">⚡ เกทับ (+2 เหรียญ)</button>
+              <button class="btn btn-soft" id="btn-pass" onclick="passCurrentAuction()">⏭️ ไม่ประมูลรายการนี้</button>
+            </div>
+          </div>
+
+          <div class="feedback-banner" id="auction-feedback">
+            <span>🐶</span>
+            <span id="feedback-text">สังเกตป้ายหมวดหมู่ความสำคัญและจำนวนเหรียญของคุณก่อนตัดสินใจเสนอราคา!</span>
+          </div>
+        </div>
+
+        <!-- คอลัมน์ขวา: น้องหมาพิธีกร + คู่แข่งบอท + การ์ดที่ประมูลได้ -->
+        <div class="side-column">
+          <div class="bots-card">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div id="auction-mascot-mini" style="width:68px; flex-shrink:0;"></div>
+              <div>
+                <strong style="font-size:0.95rem; color:#78350f;">ผู้ร่วมประมูลในลานฟาร์ม</strong>
+                <p style="font-size:0.8rem; color:#64748b;">คู่แข่งกำลังเล็งกิจกรรมสำคัญแข่งกับคุณ!</p>
+              </div>
+            </div>
+            <div id="bots-list"></div>
+          </div>
+
+          <div class="inventory-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="font-size:0.95rem; color:#14532d;">🎒 กิจกรรมที่คุณประมูลได้</strong>
+              <span style="font-size:0.82rem; font-weight:800; color:#15803d;" id="total-won-hours">รวม 0 / 24 ชม.</span>
+            </div>
+            <div class="won-chips" id="won-items-list">
+              <span style="font-size:0.82rem; color:#94a3b8;">ยังไม่มีกิจกรรม — ลองประมูลกิจกรรมแรกเลย!</span>
+            </div>
+            <div style="margin-top:12px; text-align:right;">
+              <button class="btn btn-soft btn-danger-soft" onclick="confirmQuitToMenu()">🏠 ออกจากรอบนี้</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         หน้าจอที่ 3: จัดตารางสมดุล 8-8-8 (Phase 2 - Drag & Drop / Tap Planner)
+         ====================================================================== -->
+    <section id="screen-planner" class="screen">
+      <div class="panel-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h2 style="color:#78350f;">📅 ขั้นตอนที่ 2: จัดกิจกรรมลงตารางสมดุล 8-8-8</h2>
+            <p style="font-size:0.92rem; color:#475569;">
+              ลากการ์ดกิจกรรมที่คุณประมูลได้ (หรือ <strong>แตะการ์ดแล้วแตะช่อง</strong>) ไปวางให้ตรงกับหมวดหมู่สมดุลชีวิต เพื่อรับโบนัส +5 คะแนน!
+            </p>
+          </div>
+          <button class="btn btn-soft" onclick="autoAssignPlanner()">✨ จัดเรียงให้อัตโนมัติ</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <strong style="font-size:0.88rem; color:#334155;">การ์ดกิจกรรมที่รอจัดลงตาราง:</strong>
+          <div class="tray-cards" id="unassigned-tray"></div>
+        </div>
+
+        <div class="planner-zones">
+          <div class="zone-box zone-rest" data-zone="rest"
+               ondragover="handleZoneDragOver(event)" ondragleave="handleZoneDragLeave(event)" ondrop="handleZoneDrop(event, 'rest')"
+               onclick="handleZoneTap('rest')">
+            <h3 style="color:#1d4ed8; font-size:1rem;">😴 โซนที่ 1: พักผ่อนนอนหลับ (8 ชม.)</h3>
+            <p style="font-size:0.8rem; color:#475569; margin-bottom:8px;">การนอนหลับและฟื้นฟูร่างกาย</p>
+            <div id="zone-rest-items" class="won-chips"></div>
+          </div>
+
+          <div class="zone-box zone-work" data-zone="work"
+               ondragover="handleZoneDragOver(event)" ondragleave="handleZoneDragLeave(event)" ondrop="handleZoneDrop(event, 'work')"
+               onclick="handleZoneTap('work')">
+            <h3 style="color:#b45309; font-size:1rem;">📚 โซนที่ 2: เรียน & พัฒนาตนเอง (8 ชม.)</h3>
+            <p style="font-size:0.8rem; color:#475569; margin-bottom:8px;">ตั้งใจเรียน อ่านหนังสือ ฝึกทักษะ</p>
+            <div id="zone-work-items" class="won-chips"></div>
+          </div>
+
+          <div class="zone-box zone-life" data-zone="life"
+               ondragover="handleZoneDragOver(event)" ondragleave="handleZoneDragLeave(event)" ondrop="handleZoneDrop(event, 'life')"
+               onclick="handleZoneTap('life')">
+            <h3 style="color:#be185d; font-size:1rem;">❤️ โซนที่ 3: สุขภาพ ครอบครัว & พักใจ (8 ชม.)</h3>
+            <p style="font-size:0.8rem; color:#475569; margin-bottom:8px;">ออกกำลังกาย ครอบครัว งานอดิเรก (หรือสิ่งล่อใจ)</p>
+            <div id="zone-life-items" class="won-chips"></div>
+          </div>
+        </div>
+
+        <div style="text-align:center; margin-top:16px;">
+          <button class="btn btn-primary btn-lg" onclick="finishPlannerPhase()">🌙 เข้าสู่ช่วงท้ายวัน (เผชิญเหตุการณ์ไม่คาดฝัน)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         หน้าจอที่ 4: เหตุการณ์ไม่คาดฝัน (Phase 3 - Interactive Plot Twist)
+         ====================================================================== -->
+    <section id="screen-twist" class="screen">
+      <div class="twist-card">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <span style="font-size:2.6rem;">⚡</span>
+          <div>
+            <span style="background:#f43f5e; color:#fff; padding:3px 10px; border-radius:999px; font-size:0.78rem; font-weight:800;">
+              PLOT TWIST! เหตุการณ์ไม่คาดฝันท้ายวัน
+            </span>
+            <h2 id="twist-title" style="color:#881337; margin-top:4px;">งานกลุ่มด่วนเข้ากะทันหัน!</h2>
+          </div>
+        </div>
+
+        <p id="twist-desc" style="font-size:1rem; color:#334155; background:#fff; padding:14px; border-radius:12px; border:1px solid #fecdd3;">
+          รายละเอียดสถานการณ์...
+        </p>
+
+        <div id="twist-shield-status" class="feedback-banner" style="margin-top:12px;"></div>
+
+        <h3 style="font-size:0.98rem; color:#881337; margin-top:16px;">คุณจะตัดสินใจรับมืออย่างไร?</h3>
+        <div id="twist-choices"></div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         หน้าจอที่ 5: สรุปผล & Learning Assessment Dashboard
+         ====================================================================== -->
+    <section id="screen-result" class="screen">
+      <div class="panel-card">
+        <div style="text-align:center; margin-bottom:18px;">
+          <div id="result-badge-icon" style="font-size:3.2rem;">🏆</div>
+          <h1 id="result-heading" style="color:#78350f; font-size:1.8rem;">ยินดีด้วย! คุณบริหารเวลา 24 ชั่วโมงได้ยอดเยี่ยม</h1>
+          <div style="display:inline-block; background:#fef3c7; border:2px solid #f59e0b; padding:6px 18px; border-radius:999px; font-weight:800; color:#92400e; margin-top:6px;">
+            ฉายาของคุณ: <span id="result-title-badge">ปรมาจารย์ฟาร์มสมดุลทองคำ</span>
+          </div>
+          <div id="result-stars" style="font-size:1.8rem; margin-top:8px;">⭐⭐⭐</div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- ซ้าย: กราฟวงกลมชีวิต 24 ชั่วโมง (SVG Pie Chart) -->
+          <div class="pie-wrapper">
+            <h3 style="font-size:1rem; color:#1e293b; margin-bottom:10px;">📊 แผนภาพวงกลมชีวิต 24 ชั่วโมงของคุณ</h3>
+            <svg id="life-pie-svg" width="210" height="210" viewBox="0 0 210 210"></svg>
+            <div class="legend-list" id="pie-legend"></div>
+          </div>
+
+          <!-- ขวา: การประเมินผลการเรียนรู้และข้อเสนอแนะรายบุคคล -->
+          <div>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:14px;">
+              <div class="score-pill">
+                <div style="font-size:0.75rem;">คะแนนรวม</div>
+                <div style="font-size:1.35rem;" id="final-score">0</div>
+              </div>
+              <div class="score-pill" style="background:#f0fdf4; border-color:#86efac; color:#166534;">
+                <div style="font-size:0.75rem;">ความแม่นยำจัดลำดับ</div>
+                <div style="font-size:1.35rem;" id="final-accuracy">0%</div>
+              </div>
+              <div class="score-pill" style="background:#fefce8; border-color:#fde047; color:#854d0e;">
+                <div style="font-size:0.75rem;">สถิติสูงสุดด่านนี้</div>
+                <div style="font-size:1.35rem;" id="final-highscore">0</div>
+              </div>
+            </div>
+
+            <div style="background:#f8fafc; border-radius:16px; padding:16px; border:2px solid #cbd5e1;">
+              <h3 style="font-size:1rem; color:#0f172a; margin-bottom:8px;">🎓 บทวิเคราะห์และข้อเสนอแนะรายบุคคล:</h3>
+              <ul id="personal-feedback-list" style="padding-left:20px; color:#334155; font-size:0.92rem; display:grid; gap:8px;"></ul>
+            </div>
+
+            <div style="margin-top:14px; background:#eff6ff; border-radius:14px; padding:12px 14px; font-size:0.88rem; color:#1e40af;">
+              <strong>💡 เชื่อมโยงสู่ชีวิตจริง (Self-Reflection):</strong> ลองสำรวจตารางวันพรุ่งนี้ของคุณว่า กิจกรรมสำคัญ 20% แรก (กฎ 80/20) ที่ต้องลงมือทำก่อนเปิดโซเชียลมีเดียคืออะไร?
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:22px;">
+          <button class="btn btn-primary btn-lg" onclick="startGame()">🔄 เล่นด่านนี้อีกครั้ง</button>
+          <button class="btn btn-success btn-lg" id="btn-next-level" onclick="playNextLevel()">➡️ เล่นด่านถัดไป</button>
+          <button class="btn btn-soft" onclick="goHome()">🏠 กลับหน้าหลัก</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 1: วิธีการเล่น (How to Play)
+       ======================================================================== -->
+  <div class="modal-overlay" id="modal-howto" onclick="closeModalOnBg(event, 'modal-howto')">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="color:#78350f;">📖 วิธีการเล่นเกม "ประมูลเวลา 24 ชั่วโมง"</h2>
+        <button class="btn btn-soft" onclick="closeModal('modal-howto')">✖ ปิด</button>
+      </div>
+      <ol style="padding-left:20px; display:grid; gap:10px; color:#334155;">
+        <li><strong>รับทุนเวลา 24 เหรียญ:</strong> คุณมีเหรียญเวลาเริ่มต้น 24 เหรียญ เปรียบเสมือน 24 ชั่วโมงใน 1 วัน</li>
+        <li><strong>ประมูลกิจกรรมสำคัญ:</strong> กิจกรรมแต่ละอย่างมีจำนวนสิทธิ์จำกัด คุณต้องแข่งเสนอราคา (Bid) กับเพื่อนชาวฟาร์มภายในเวลาที่กำหนด (ลากเหรียญวางบนแท่น หรือกดปุ่ม +1 / +2 เหรียญ)</li>
+        <li><strong>ระวังกับดักเวลาและค่าเสียโอกาส:</strong> หากใช้เหรียญหมดไปกับเรื่องไร้สาระ (เช่น ไถโซเชียลข้ามคืน) คุณจะไม่มีเหรียญเหลือสำหรับ <em>การนอนหลับ</em> หรือ <em>การเรียน</em></li>
+        <li><strong>จัดตารางสมดุล 8-8-8:</strong> นำกิจกรรมที่ประมูลได้มาจัดลง 3 โซนให้สมดุลเพื่อรับคะแนนโบนัส</li>
+        <li><strong>รับมือเหตุการณ์ไม่คาดฝัน:</strong> ช่วงท้ายวันจะมีเหตุการณ์จริงเกิดขึ้น หากพลังชีวิตด้านใดด้านหนึ่งลดลงเหลือ <strong>0%</strong> เกมจะจบทันที!</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2: คลังความรู้ทักษะชีวิต (8-8-8, Eisenhower Matrix, 80/20)
+       ======================================================================== -->
+  <div class="modal-overlay" id="modal-knowledge" onclick="closeModalOnBg(event, 'modal-knowledge')">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="color:#15803d;">🧠 คลังความรู้การบริหารเวลา 24 ชั่วโมง</h2>
+        <button class="btn btn-soft" onclick="closeModal('modal-knowledge')">✖ ปิด</button>
+      </div>
+      <div style="background:#f0fdf4; padding:12px; border-radius:12px; margin-bottom:12px;">
+        <strong>1. สูตรสมดุลเวลา 8-8-8:</strong> แบ่ง 24 ชั่วโมงเป็น <strong>8 ชม. นอนหลับพักผ่อน</strong> + <strong>8 ชม. เรียน/ทำงานอย่างมีคุณภาพ</strong> + <strong>8 ชม. ดูแลสุขภาพ ครอบครัว และพัฒนาตนเอง</strong>
+      </div>
+      <div>
+        <strong>2. เมทริกซ์บริหารเวลาของไอเซนฮาวร์ (Eisenhower Matrix):</strong>
+        <div class="matrix-grid">
+          <div class="matrix-cell" style="background:#fee2e2; color:#991b1b;">
+            <strong>ช่อง 1: สำคัญ & เร่งด่วน (ทำทันที)</strong><br/>เช่น งานส่งพรุ่งนี้, สอบย่อย, ป่วยต้องพักรักษา
+          </div>
+          <div class="matrix-cell" style="background:#dcfce7; color:#166534;">
+            <strong>ช่อง 2: สำคัญ & ไม่เร่งด่วน (วางแผนทำสม่ำเสมอ)</strong><br/>เช่น นอนให้พอ, ออกกำลังกาย, ทบทวนบทเรียนล่วงหน้า *(สร้างคุณค่าสูงสุด!)*
+          </div>
+          <div class="matrix-cell" style="background:#fef3c7; color:#92400e;">
+            <strong>ช่อง 3: ไม่สำคัญ & เร่งด่วน (ลดเวลา)</strong><br/>เช่น การแจ้งเตือนแชตเด้งตลอดเวลา, เรื่องแทรกที่ไม่เกี่ยวกับเป้าหมาย
+          </div>
+          <div class="matrix-cell" style="background:#f1f5f9; color:#475569;">
+            <strong>ช่อง 4: ไม่สำคัญ & ไม่เร่งด่วน (จำกัด/ตัดทิ้ง)</strong><br/>เช่น ไถฟีดโซเชียลไร้จุดหมาย, เล่นเกมโต้รุ่ง
+          </div>
+        </div>
+      </div>
+      <div style="background:#eff6ff; padding:12px; border-radius:12px; margin-top:12px;">
+        <strong>3. กฎ 80/20 (Pareto Principle):</strong> กิจกรรมสำคัญเพียง 20% ของวัน สามารถสร้างผลลัพธ์และความก้าวหน้าให้ชีวิตได้ถึง 80%
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 3: สถิติคะแนนสูงสุด (LocalStorage High Scores)
+       ======================================================================== -->
+  <div class="modal-overlay" id="modal-scores" onclick="closeModalOnBg(event, 'modal-scores')">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="color:#b45309;">🏆 สถิติคะแนนสูงสุด (High Scores)</h2>
+        <button class="btn btn-soft" onclick="closeModal('modal-scores')">✖ ปิด</button>
+      </div>
+      <div id="highscore-table-container"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       JAVASCRIPT: GAME ENGINE, EDUCATIONAL CONTENT & WEB AUDIO API
+       ======================================================================== -->
+  <script>
+    /* ==========================================================================
+       ส่วนที่ 1: ฐานข้อมูลเนื้อหาการเรียนรู้ (GAME_CONFIG)
+       * ครูผู้สอนสามารถแก้ไขชื่อกิจกรรม ราคา เวลา คะแนน และเหตุการณ์แทรกได้ในส่วนนี้ *
+       ========================================================================== */
+    const GAME_CONFIG = {
+      characters: [
+        { id: "farmer", name: "น้องหมาชาวฟาร์มหมวกฟาง", unlockLevel: 1, hatColor: "#eab308", shirtColor: "#2563eb" },
+        { id: "explorer", name: "น้องหมานักสำรวจเวลา", unlockLevel: 2, hatColor: "#16a34a", shirtColor: "#0d9488" },
+        { id: "master", name: "น้องหมาปรมาจารย์ทองคำ", unlockLevel: 3, hatColor: "#f59e0b", shirtColor: "#7c3aed" }
+      ],
+
+      levels: [
+        {
+          id: 1,
+          name: "ด่านที่ 1: วันเรียนสดใสในฟาร์ม (ง่าย)",
+          desc: "ฝึกจัดสมดุลพื้นฐาน 8-8-8 เลือกนอน เรียน และพักผ่อนให้ครบด้าน",
+          timerSec: 25,
+          bots: [
+            { name: "🐑 น้องแกะขยัน", style: "study", coins: 24 },
+            { name: "🐷 น้องหมูสายชิลล์", style: "rest", coins: 24 }
+          ],
+          items: [
+            {
+              id: "sleep8", title: "นอนหลับสนิท 8 ชั่วโมง", icon: "🛏️",
+              desc: "ฟื้นฟูพลังกายและสมองเต็มเปี่ยม ป้องกันการล้มป่วยท้ายวัน",
+              basePrice: 4, hours: 8, slots: 2, zone: "rest", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 12, effects: { health: 35, study: 10, happy: 15 }
+            },
+            {
+              id: "study_focus", title: "ตั้งใจเรียนและทบทวนบทเรียน", icon: "📚",
+              desc: "โฟกัสการเรียนในห้องและสรุปเนื้อหาสำคัญประจำวัน",
+              basePrice: 4, hours: 6, slots: 2, zone: "work", matrix: "q1", matrixLabel: "สำคัญ & เร่งด่วน",
+              isGood: true, points: 12, effects: { health: -5, study: 40, happy: 5 }
+            },
+            {
+              id: "exercise_food", title: "ออกกำลังกาย & กินอาหารดี", icon: "🥗",
+              desc: "วิ่งเล่นในฟาร์ม 1 ชม. และทานผักผลไม้สดเสริมภูมิคุ้มกัน",
+              basePrice: 2, hours: 3, slots: 2, zone: "life", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 10, effects: { health: 30, study: 5, happy: 15 }
+            },
+            {
+              id: "family_time", title: "ช่วยงานบ้าน & คุยกับครอบครัว", icon: "🏡",
+              desc: "สร้างความอบอุ่นและความเข้าใจในครอบครัว ได้รับกำลังใจเต็มร้อย",
+              basePrice: 2, hours: 3, slots: 2, zone: "life", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 10, effects: { health: 5, study: 5, happy: 35 }
+            },
+            {
+              id: "social_scroll", title: "ไถโซเชียลดูคลิปสั้นเพลินๆ", icon: "📱",
+              desc: "ราคาถูกมาก! แต่เผลอไถเพลินจนเสียเวลาและปวดตา",
+              basePrice: 1, hours: 4, slots: 3, zone: "life", matrix: "q4", matrixLabel: "ไม่สำคัญ & ไม่เร่งด่วน",
+              isGood: false, points: -4, effects: { health: -15, study: -15, happy: 5 }
+            },
+            {
+              id: "hobby_art", title: "พักผ่อนทำงานอดิเรกที่ชอบ", icon: "🎨",
+              desc: "วาดรูป ฟังเพลง ผ่อนคลายความเครียดจากการเรียน",
+              basePrice: 2, hours: 2, slots: 2, zone: "life", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 8, effects: { health: 10, study: 0, happy: 25 }
+            }
+          ],
+          twists: [
+            {
+              title: "ครูประกาศสอบย่อยเก็บคะแนนพรุ่งนี้เช้า!",
+              desc: "เย็นนี้เพื่อนๆ ในห้องต่างตื่นเต้นกับการสอบย่อยวิชาหลัก คุณเตรียมตัวมาพร้อมแค่ไหน?",
+              shieldId: "sleep8",
+              shieldMsg: "✅ ยอดเยี่ยม! คุณมี 'นอนหลับสนิท 8 ชั่วโมง' สมองจึงปลอดโปร่งพร้อมทบทวนก่อนสอบ",
+              noShieldMsg: "⚠️ แย่แล้ว! คุณไม่ได้ประมูล 'นอนหลับสนิท 8 ชั่วโมง' ทำให้สมองล้าและอ่อนเพลีย (-15 สุขภาพ)",
+              noShieldPenalty: { health: -15, study: -10, happy: -5, score: -4 },
+              choices: [
+                {
+                  text: "📖 ทบทวนเฉพาะหัวข้อสำคัญ 20% ที่ออกสอบแน่ๆ แล้วเข้านอนตรงเวลา (กฎ 80/20)",
+                  feedback: "ยอดเยี่ยม! การใช้กฎ 80/20 ช่วยให้คุณทำข้อสอบได้ดีโดยไม่เสียสุขภาพ",
+                  delta: { health: 5, study: 15, happy: 10, score: 8 }
+                },
+                {
+                  text: "☕ อดนอนโต้รุ่งอ่านทุกหน้าจนถึงเช้า",
+                  feedback: "แม้จะอ่านจบ แต่ร่างกายอ่อนเพลียอย่างหนักจนแทบไม่มีแรงทำข้อสอบ",
+                  delta: { health: -25, study: 5, happy: -15, score: -3 }
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          id: 2,
+          name: "ด่านที่ 2: วัยรุ่นยุคดิจิทัล (ปานกลาง)",
+          desc: "คู่แข่งมากขึ้นและมีสิ่งล่อใจราคาถูก ฝึกแยกแยะตาม Eisenhower Matrix",
+          timerSec: 20,
+          bots: [
+            { name: "🐰 น้องกระต่ายติดจอ", style: "distract", coins: 24 },
+            { name: "🐮 น้องวัวบ้างาน", style: "study", coins: 24 },
+            { name: "🐔 น้องไก่รักสุขภาพ", style: "health", coins: 24 }
+          ],
+          items: [
+            {
+              id: "sleep8", title: "นอนหลับสนิท 8 ชั่วโมง", icon: "🛏️",
+              desc: "รากฐานสำคัญที่สุดของวัยเรียน ช่วยให้เติบโตและจดจำบทเรียนได้ดี",
+              basePrice: 5, hours: 8, slots: 2, zone: "rest", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 14, effects: { health: 35, study: 10, happy: 15 }
+            },
+            {
+              id: "project_group", title: "ทำโครงงานกลุ่มกับเพื่อน", icon: "🤝",
+              desc: "งานสำคัญใกล้กำหนดส่ง ฝึกการทำงานร่วมกันและความรับผิดชอบ",
+              basePrice: 4, hours: 5, slots: 2, zone: "work", matrix: "q1", matrixLabel: "สำคัญ & เร่งด่วน",
+              isGood: true, points: 13, effects: { health: -5, study: 35, happy: 15 }
+            },
+            {
+              id: "gaming_marathon", title: "เล่นเกมออนไลน์มาราธอน", icon: "🎮",
+              desc: "สนุกตื่นเต้นช่วงแรก แต่กินเวลาชีวิตไปฟรีๆ และทำให้พักผ่อนไม่พอ",
+              basePrice: 1, hours: 5, slots: 3, zone: "life", matrix: "q4", matrixLabel: "ไม่สำคัญ & ไม่เร่งด่วน",
+              isGood: false, points: -6, effects: { health: -20, study: -20, happy: 10 }
+            },
+            {
+              id: "skill_read", title: "อ่านหนังสือ & ฝึกทักษะใหม่", icon: "💡",
+              desc: "ลงทุนเวลาพัฒนาตนเองระยะยาว (ช่อง 2 ของ Eisenhower Matrix)",
+              basePrice: 3, hours: 3, slots: 2, zone: "work", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 12, effects: { health: 0, study: 30, happy: 15 }
+            },
+            {
+              id: "exercise_food", title: "ออกกำลังกาย & กินอาหารครบ 5 หมู่", icon: "🏃",
+              desc: "เสริมความแข็งแรงให้ร่างกายพร้อมลุยทุกกิจกรรม",
+              basePrice: 3, hours: 3, slots: 2, zone: "life", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 11, effects: { health: 35, study: 5, happy: 15 }
+            },
+            {
+              id: "chat_rumor", title: "ตามดราม่าในแชตกลุ่มทั้งเย็น", icon: "💬",
+              desc: "แจ้งเตือนเด้งไม่หยุด ดูเหมือนเร่งด่วนแต่ไม่ได้สร้างประโยชน์ต่อชีวิต",
+              basePrice: 1, hours: 3, slots: 3, zone: "life", matrix: "q3", matrixLabel: "ไม่สำคัญ & เร่งด่วน",
+              isGood: false, points: -4, effects: { health: -10, study: -15, happy: -10 }
+            },
+            {
+              id: "family_time", title: "กินข้าวเย็นและพูดคุยกับครอบครัว", icon: "🍲",
+              desc: "เติมพลังใจและกระชับความสัมพันธ์ในบ้าน",
+              basePrice: 2, hours: 2, slots: 2, zone: "life", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 10, effects: { health: 10, study: 0, happy: 30 }
+            }
+          ],
+          twists: [
+            {
+              title: "เพื่อนสนิทชวนเล่นเกมยาวถึงตี 2 ทั้งที่พรุ่งนี้มีเรียน!",
+              desc: "เพื่อนส่งข้อความมาว่า 'ขาดอีกคนเดียวครบตี้ รีบเข้ามาเลย!' คุณจะตอบสนองต่อสิ่งรบกวนนี้อย่างไร?",
+              shieldId: "skill_read",
+              shieldMsg: "✅ คุณมีเป้าหมายการพัฒนาตนเองชัดเจน จึงรู้เท่าทันสิ่งล่อใจได้ง่ายขึ้น!",
+              noShieldMsg: "⚠️ แรงดึงดูดจากโซเชียลและเกมทำให้คุณลังเล (-10 ความสุข)",
+              noShieldPenalty: { health: -5, study: -5, happy: -10, score: -2 },
+              choices: [
+                {
+                  text: "🛑 กล้าปฏิเสธอย่างสุภาพ แจ้งเพื่อนว่าต้องพักผ่อนเตรียมเรียนพรุ่งนี้",
+                  feedback: "ยอดเยี่ยม! การกล้าปฏิเสธสิ่งรบกวนช่วยรักษาเวลาและสุขภาพของคุณไว้ได้",
+                  delta: { health: 15, study: 15, happy: 10, score: 10 }
+                },
+                {
+                  text: "🕹️ ยอมตามใจเพื่อน เล่นยาวจนดึกดื่น",
+                  feedback: "คุณเสียค่าเสียโอกาสในการพักผ่อน ทำให้เช้าวันรุ่งขึ้นง่วงซึมเรียนไม่รู้เรื่อง",
+                  delta: { health: -25, study: -20, happy: 5, score: -6 }
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          id: 3,
+          name: "ด่านที่ 3: วิกฤตตารางชีวิตแน่นเอี๊ยด (ยาก)",
+          desc: "สิทธิ์กิจกรรมมีจำกัดมาก! ต้องประมูลอย่างมีกลยุทธ์และรับมือเหตุการณ์ซ้อน",
+          timerSec: 15,
+          bots: [
+            { name: "🦊 น้องจิ้งจอกนักวางแผน", style: "smart", coins: 24 },
+            { name: "🐮 น้องวัวบ้างาน", style: "study", coins: 24 },
+            { name: "🐰 น้องกระต่ายติดจอ", style: "distract", coins: 24 }
+          ],
+          items: [
+            {
+              id: "sleep8", title: "นอนหลับสนิท 8 ชั่วโมง", icon: "🛏️",
+              desc: "เกราะป้องกันวิกฤตอันดับ 1 สิทธิ์มีจำกัดและเป็นที่ต้องการสูงมาก!",
+              basePrice: 5, hours: 8, slots: 1, zone: "rest", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 16, effects: { health: 40, study: 10, happy: 15 }
+            },
+            {
+              id: "urgent_exam", title: "ติวเข้มเตรียมสอบปลายภาค", icon: "📝",
+              desc: "ภารกิจสำคัญเร่งด่วนที่ส่งผลต่อผลการเรียนโดยตรง",
+              basePrice: 5, hours: 6, slots: 2, zone: "work", matrix: "q1", matrixLabel: "สำคัญ & เร่งด่วน",
+              isGood: true, points: 15, effects: { health: -10, study: 45, happy: 0 }
+            },
+            {
+              id: "exercise_food", title: "ออกกำลังกาย & ดูแลสุขภาพเชิงรุก", icon: "🥦",
+              desc: "เสริมภูมิคุ้มกันป้องกันโรคระบาดช่วงอากาศเปลี่ยนแปลง",
+              basePrice: 3, hours: 3, slots: 1, zone: "life", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 13, effects: { health: 35, study: 5, happy: 15 }
+            },
+            {
+              id: "family_time", title: "ปรึกษาและใช้เวลากับครอบครัว", icon: "💞",
+              desc: "ที่พึ่งทางใจสำคัญในวันที่เจอปัญหาหนัก",
+              basePrice: 3, hours: 3, slots: 2, zone: "life", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 12, effects: { health: 10, study: 5, happy: 35 }
+            },
+            {
+              id: "binge_series", title: "ดูซีรีส์รวดเดียวจบซีซัน", icon: "📺",
+              desc: "กับดักเวลาขนาดใหญ่ ดูเพลินจนลืมเวลาไปครึ่งวัน!",
+              basePrice: 1, hours: 6, slots: 3, zone: "life", matrix: "q4", matrixLabel: "ไม่สำคัญ & ไม่เร่งด่วน",
+              isGood: false, points: -8, effects: { health: -25, study: -25, happy: 10 }
+            },
+            {
+              id: "skill_read", title: "วางแผนตารางชีวิต & สรุปโน้ต 80/20", icon: "🗂️",
+              desc: "ใช้เวลาสั้นๆ จัดลำดับงานสำคัญ 20% แรกให้ชัดเจน",
+              basePrice: 3, hours: 2, slots: 2, zone: "work", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 14, effects: { health: 5, study: 25, happy: 20 }
+            },
+            {
+              id: "nap_power", title: "งีบพักสายตา & ฝึกสมาธิ 2 ชม.", icon: "🧘",
+              desc: "ตัวช่วยสำรองชั้นดีหากประมูลนอนหลับ 8 ชม. ไม่ทัน",
+              basePrice: 2, hours: 2, slots: 2, zone: "rest", matrix: "q2", matrixLabel: "สำคัญ & ไม่เร่งด่วน",
+              isGood: true, points: 10, effects: { health: 25, study: 10, happy: 20 }
+            }
+          ],
+          twists: [
+            {
+              title: "พายุฝนฟ้าคะนอง ไฟดับ 2 ชม. แถมพรุ่งนี้มีส่งงานใหญ่!",
+              desc: "สถานการณ์วิกฤตซ้อนวิกฤต! ทั้งเหนื่อยล้าและงานยังค้างอยู่ คุณจะรับมืออย่างไร?",
+              shieldId: "sleep8",
+              shieldMsg: "✅ พลังจากการนอนหลับ 8 ชั่วโมงช่วยให้คุณตั้งสติและแก้ปัญหาเฉพาะหน้าได้อย่างใจเย็น!",
+              noShieldMsg: "⚠️ ร่างกายอ่อนล้าจากการไม่ได้พักผ่อนเต็มที่ (-20 สุขภาพ)",
+              noShieldPenalty: { health: -20, study: -10, happy: -10, score: -5 },
+              choices: [
+                {
+                  text: "🕯️ ใช้ช่วงไฟดับพักสายตาและวางแผนลำดับงานสำคัญ พอไฟมาค่อยทำจุดสำคัญ 20% แรก",
+                  feedback: "สุดยอดทักษะการบริหารวิกฤต! คุณพลิกวิกฤตเป็นโอกาสและรักษาสมดุลชีวิตไว้ได้",
+                  delta: { health: 10, study: 20, happy: 15, score: 12 }
+                },
+                {
+                  text: "😫 ตื่นตระหนก ไถมือถือจนแบตหมด พอไฟมาก็หมดแรงทำงาน",
+                  feedback: "การขาดสติและการใช้เวลากับสิ่งรบกวนทำให้สถานการณ์แย่ลง",
+                  delta: { health: -20, study: -25, happy: -20, score: -8 }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    /* ==========================================================================
+       ส่วนที่ 2: สถานะของเกม (GAME STATE) & LOCALSTORAGE PERSISTENCE
+       ========================================================================== */
+    const STORAGE_KEY = "time_auction_farm_save_v1";
+
+    let saveData = loadSaveData();
+
+    let state = {
+      selectedLevel: 1,
+      selectedChar: "farmer",
+      soundEnabled: true,
+      coins: 24,
+      score: 0,
+      vitals: { health: 40, study: 40, happy: 40 },
+      itemIndex: 0,
+      currentBid: 0,
+      highestBidder: "ราคาเริ่มต้น",
+      playerIsHighest: false,
+      timeLeft: 25,
+      timerInterval: null,
+      botInterval: null,
+      wonItems: [],
+      plannerAssignments: {}, // { itemId: 'rest' | 'work' | 'life' }
+      selectedPlanCardId: null,
+      hintUsed: false,
+      goodDecisions: 0,
+      totalDecisions: 0
+    };
+
+    function loadSaveData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {
+        console.warn("LocalStorage unavailable:", e);
+      }
+      return {
+        unlockedLevel: 1,
+        highScores: { 1: 0, 2: 0, 3: 0 }
+      };
+    }
+
+    function persistSaveData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+      } catch (e) {
+        console.warn("Cannot save to LocalStorage:", e);
+      }
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 3: ระบบสังเคราะห์เสียงประกอบออฟไลน์ (Web Audio API SFX)
+       ========================================================================== */
+    let audioCtx = null;
+
+    function ensureAudio() {
+      if (!state.soundEnabled) return null;
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, type, duration, delay = 0, volume = 0.15) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+      gain.gain.setValueAtTime(volume, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + duration);
+    }
+
+    const SFX = {
+      coin: () => {
+        playTone(987.77, "sine", 0.12, 0, 0.16);
+        playTone(1318.51, "sine", 0.22, 0.07, 0.16);
+      },
+      gavel: () => {
+        playTone(180, "triangle", 0.12, 0, 0.25);
+        playTone(140, "triangle", 0.16, 0.14, 0.25);
+        playTone(523.25, "sine", 0.25, 0.26, 0.14);
+      },
+      tick: () => {
+        playTone(760, "sine", 0.05, 0, 0.08);
+      },
+      alert: () => {
+        playTone(440, "sawtooth", 0.18, 0, 0.14);
+        playTone(349.23, "sawtooth", 0.28, 0.18, 0.14);
+      },
+      victory: () => {
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone(f, "triangle", 0.28, i * 0.11, 0.16));
+      },
+      fail: () => {
+        [392, 349.23, 311.13, 261.63].forEach((f, i) => playTone(f, "sine", 0.28, i * 0.14, 0.15));
+      }
+    };
+
+    function toggleSound() {
+      state.soundEnabled = !state.soundEnabled;
+      document.getElementById("btn-sound").textContent = state.soundEnabled ? "🔊 เสียง: เปิด" : "🔇 เสียง: ปิด";
+      if (state.soundEnabled) SFX.coin();
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 4: กราฟิกตัวละคร SVG น้องหมานักบริหารเวลา (Dynamic Mascot SVG)
+       ========================================================================== */
+    function renderDogMascotSVG(charId = "farmer", mood = "happy", size = 155) {
+      const charCfg = GAME_CONFIG.characters.find(c => c.id === charId) || GAME_CONFIG.characters[0];
+      const eyeSvg = mood === "tired"
+        ? `<path d="M56 76 Q63 82 70 76" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
+           <path d="M90 76 Q97 82 104 76" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
+           <path d="M118 65 Q123 75 118 80 Q113 75 118 65Z" fill="#38bdf8"/>`
+        : `<circle cx="63" cy="75" r="5.5" fill="#1e293b"/>
+           <circle cx="65" cy="73" r="2" fill="#ffffff"/>
+           <circle cx="97" cy="75" r="5.5" fill="#1e293b"/>
+           <circle cx="99" cy="73" r="2" fill="#ffffff"/>`;
+
+      const mouthSvg = mood === "tired"
+        ? `<path d="M72 98 Q80 92 88 98" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>`
+        : `<path d="M70 94 Q80 106 90 94" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
+           <path d="M76 99 Q80 108 84 99" fill="#fb7185"/>`;
+
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 160 160" aria-label="น้องหมานักบริหารเวลา">
+          <!-- วงกลมฉากหลัง -->
+          <circle cx="80" cy="84" r="68" fill="#fef9c3" stroke="#facc15" stroke-width="4"/>
+          <!-- หูตกน่ารัก -->
+          <ellipse cx="42" cy="76" rx="14" ry="26" transform="rotate(18 42 76)" fill="#b45309"/>
+          <ellipse cx="118" cy="76" rx="14" ry="26" transform="rotate(-18 118 76)" fill="#b45309"/>
+          <!-- ลำตัวและชุดเอี๊ยมชาวฟาร์ม -->
+          <rect x="52" y="108" width="56" height="40" rx="18" fill="#fcd34d"/>
+          <rect x="56" y="114" width="48" height="34" rx="12" fill="${charCfg.shirtColor}"/>
+          <circle cx="66" cy="122" r="3" fill="#fde047"/>
+          <circle cx="94" cy="122" r="3" fill="#fde047"/>
+          <!-- ใบหน้าน้องหมา -->
+          <circle cx="80" cy="76" r="36" fill="#fde68a" stroke="#d97706" stroke-width="2.5"/>
+          <ellipse cx="80" cy="88" rx="16" ry="12" fill="#fffbeb"/>
+          <ellipse cx="80" cy="84" rx="6" ry="4.5" fill="#1e293b"/>
+          ${eyeSvg}
+          ${mouthSvg}
+          <!-- แก้มชมพูพาสเทล -->
+          <circle cx="54" cy="86" r="5" fill="#f9a8d4" opacity="0.75"/>
+          <circle cx="106" cy="86" r="5" fill="#f9a8d4" opacity="0.75"/>
+          <!-- หมวกฟาร์ม -->
+          <ellipse cx="80" cy="44" rx="44" ry="9" fill="${charCfg.hatColor}" stroke="#92400e" stroke-width="2"/>
+          <path d="M54 44 Q80 18 106 44 Z" fill="${charCfg.hatColor}" stroke="#92400e" stroke-width="2"/>
+          <!-- นาฬิกาจับเวลาพกพา -->
+          <circle cx="122" cy="122" r="15" fill="#ffffff" stroke="#d97706" stroke-width="3"/>
+          <path d="M122 114v8l5 4" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      `;
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 5: การเรนเดอร์หน้าต้อนรับและการจัดการหน้าจอ
+       ========================================================================== */
+    function initStartScreen() {
+      const levelContainer = document.getElementById("level-selector");
+      levelContainer.innerHTML = GAME_CONFIG.levels.map(lvl => {
+        const isLocked = lvl.id > saveData.unlockedLevel;
+        const isSelected = lvl.id === state.selectedLevel;
+        const best = saveData.highScores[lvl.id] || 0;
+        return `
+          <div class="select-box ${isSelected ? "selected" : ""} ${isLocked ? "locked" : ""}"
+               onclick="${isLocked ? "" : `selectLevel(${lvl.id})`}">
+            <div style="display:flex; justify-content:space-between; font-weight:800; color:#78350f;">
+              <span>${isLocked ? "🔒" : "🌾"} ด่านที่ ${lvl.id}</span>
+              <small style="color:#0284c7;">สูงสุด: ${best}</small>
+            </div>
+            <div style="font-weight:800; font-size:0.95rem; margin:4px 0;">${lvl.name.replace(/^ด่านที่ \d+: /, "")}</div>
+            <p style="font-size:0.8rem; color:#475569;">${isLocked ? "ผ่านด่านก่อนหน้าเพื่อปลดล็อก" : lvl.desc}</p>
+          </div>
+        `;
+      }).join("");
+
+      const charContainer = document.getElementById("character-selector");
+      charContainer.innerHTML = GAME_CONFIG.characters.map(ch => {
+        const isLocked = ch.unlockLevel > saveData.unlockedLevel;
+        const isSelected = ch.id === state.selectedChar;
+        return `
+          <div class="select-box ${isSelected ? "selected" : ""} ${isLocked ? "locked" : ""}"
+               onclick="${isLocked ? "" : `selectCharacter('${ch.id}')`}">
+            <div style="font-weight:800; font-size:0.9rem; color:#1e293b;">
+              ${isLocked ? "🔒" : "🐶"} ${ch.name}
+            </div>
+            <small style="color:#64748b;">${isLocked ? `ปลดล็อกเมื่อผ่านด่าน ${ch.unlockLevel - 1}` : "พร้อมใช้งาน!"}</small>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("start-mascot-svg").innerHTML = renderDogMascotSVG(state.selectedChar, "happy", 175);
+    }
+
+    function selectLevel(id) {
+      SFX.coin();
+      state.selectedLevel = id;
+      initStartScreen();
+    }
+
+    function selectCharacter(id) {
+      SFX.coin();
+      state.selectedChar = id;
+      initStartScreen();
+    }
+
+    function switchScreen(screenId) {
+      document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+      document.getElementById(screenId).classList.add("active");
+    }
+
+    function goHome() {
+      clearAllTimers();
+      initStartScreen();
+      switchScreen("screen-start");
+    }
+
+    function confirmQuitToMenu() {
+      if (confirm("ต้องการออกจากรอบการประมูลนี้กลับสู่หน้าหลักหรือไม่?")) {
+        goHome();
+      }
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 6: เริ่มเกม & กลไกการประมูล (PHASE 1: LIVE AUCTION)
+       ========================================================================== */
+    function clearAllTimers() {
+      if (state.timerInterval) clearInterval(state.timerInterval);
+      if (state.botInterval) clearInterval(state.botInterval);
+      state.timerInterval = null;
+      state.botInterval = null;
+    }
+
+    function getCurrentLevelData() {
+      return GAME_CONFIG.levels.find(l => l.id === state.selectedLevel) || GAME_CONFIG.levels[0];
+    }
+
+    function startGame() {
+      clearAllTimers();
+      const lvl = getCurrentLevelData();
+      state.coins = 24;
+      state.score = 0;
+      state.vitals = { health: 40, study: 40, happy: 40 };
+      state.itemIndex = 0;
+      state.wonItems = [];
+      state.plannerAssignments = {};
+      state.selectedPlanCardId = null;
+      state.hintUsed = false;
+      state.goodDecisions = 0;
+      state.totalDecisions = 0;
+
+      // รีเซ็ตเหรียญของบอทในด่าน
+      lvl.bots.forEach(b => b.coins = 24);
+
+      const hintBtn = document.getElementById("btn-hint");
+      hintBtn.disabled = false;
+      hintBtn.textContent = "💡 ที่ปรึกษาเวลา (1)";
+
+      SFX.coin();
+      switchScreen("screen-auction");
+      updateHUD();
+      loadAuctionRound();
+    }
+
+    function updateHUD() {
+      document.getElementById("hud-coins").textContent = state.coins;
+      document.getElementById("hud-score").textContent = state.score;
+
+      ["health", "study", "happy"].forEach(key => {
+        const val = Math.max(0, Math.min(100, state.vitals[key]));
+        state.vitals[key] = val;
+        document.getElementById(`val-${key}`).textContent = `${val}%`;
+        document.getElementById(`bar-${key}`).style.width = `${val}%`;
+      });
+
+      const mood = state.vitals.health <= 25 ? "tired" : "happy";
+      document.getElementById("auction-mascot-mini").innerHTML = renderDogMascotSVG(state.selectedChar, mood, 68);
+
+      const totalHours = state.wonItems.reduce((sum, it) => sum + it.hours, 0);
+      document.getElementById("total-won-hours").textContent = `รวม ${totalHours} / 24 ชม.`;
+
+      const listEl = document.getElementById("won-items-list");
+      if (state.wonItems.length === 0) {
+        listEl.innerHTML = `<span style="font-size:0.82rem; color:#94a3b8;">ยังไม่มีกิจกรรม — ลองประมูลกิจกรรมแรกเลย!</span>`;
+      } else {
+        listEl.innerHTML = state.wonItems.map(it =>
+          `<span class="won-chip">${it.icon} ${it.title} (${it.hours} ชม.)</span>`
+        ).join("");
+      }
+    }
+
+    function loadAuctionRound() {
+      clearAllTimers();
+      const lvl = getCurrentLevelData();
+
+      if (state.itemIndex >= lvl.items.length || state.coins <= 0) {
+        startPlannerPhase();
+        return;
+      }
+
+      const item = lvl.items[state.itemIndex];
+      state.currentBid = item.basePrice;
+      state.highestBidder = "ราคาเริ่มต้น";
+      state.playerIsHighest = false;
+      state.timeLeft = lvl.timerSec;
+
+      document.getElementById("round-indicator").textContent = `รายการที่ ${state.itemIndex + 1} / ${lvl.items.length}`;
+      document.getElementById("level-badge-name").textContent = lvl.name;
+      document.getElementById("item-icon").textContent = item.icon;
+      document.getElementById("item-title").textContent = item.title;
+      document.getElementById("item-desc").textContent = item.desc;
+      document.getElementById("item-hours").textContent = item.hours;
+      document.getElementById("item-slots").textContent = item.slots;
+
+      const tagEl = document.getElementById("item-matrix-tag");
+      tagEl.textContent = `หมวด: ${item.matrixLabel}`;
+      tagEl.className = `eisenhower-tag tag-${item.matrix}`;
+
+      renderAuctionBidState();
+      renderBotsList();
+
+      // ตั้งเวลานับถอยหลังต่อรอบ
+      const timerEl = document.getElementById("auction-timer");
+      timerEl.classList.remove("urgent");
+      timerEl.textContent = `⏱️ ${state.timeLeft} วิ`;
+
+      state.timerInterval = setInterval(() => {
+        state.timeLeft--;
+        timerEl.textContent = `⏱️ ${state.timeLeft} วิ`;
+        if (state.timeLeft <= 5 && state.timeLeft > 0) {
+          timerEl.classList.add("urgent");
+          SFX.tick();
+        }
+        if (state.timeLeft <= 0) {
+          resolveCurrentAuction();
+        }
+      }, 1000);
+
+      // ตั้งจังหวะให้บอท AI แข่งเสนอราคาอย่างสมจริง
+      state.botInterval = setInterval(() => {
+        simulateBotBid(item, lvl);
+      }, 3400);
+    }
+
+    function renderAuctionBidState() {
+      document.getElementById("current-bid").textContent = state.currentBid;
+      document.getElementById("highest-bidder").textContent = state.highestBidder;
+
+      const minNext1 = state.highestBidder === "ราคาเริ่มต้น" ? state.currentBid : state.currentBid + 1;
+      const minNext2 = state.highestBidder === "ราคาเริ่มต้น" ? state.currentBid + 1 : state.currentBid + 2;
+
+      const btn1 = document.getElementById("btn-bid-1");
+      const btn2 = document.getElementById("btn-bid-2");
+
+      btn1.textContent = `🔨 เสนอราคา (${minNext1} เหรียญ)`;
+      btn2.textContent = `⚡ เกทับ (${minNext2} เหรียญ)`;
+
+      btn1.disabled = state.coins < minNext1 || state.playerIsHighest;
+      btn2.disabled = state.coins < minNext2 || state.playerIsHighest;
+    }
+
+    function renderBotsList() {
+      const lvl = getCurrentLevelData();
+      const container = document.getElementById("bots-list");
+      container.innerHTML = lvl.bots.map(b => {
+        const isLead = state.highestBidder === b.name;
+        return `
+          <div class="bot-row ${isLead ? "leading" : ""}">
+            <span>${b.name} ${isLead ? "🔥" : ""}</span>
+            <span style="color:#854d0e; font-weight:700;">🪙 ${b.coins}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function placePlayerBid(step) {
+      const lvl = getCurrentLevelData();
+      const item = lvl.items[state.itemIndex];
+      const nextPrice = state.highestBidder === "ราคาเริ่มต้น"
+        ? state.currentBid + (step - 1)
+        : state.currentBid + step;
+
+      if (state.coins < nextPrice) {
+        setFeedback("warn", "🪙 เหรียญเวลาของคุณไม่พอสำหรับราคานี้แล้ว!");
+        return;
+      }
+
+      SFX.coin();
+      state.currentBid = nextPrice;
+      state.highestBidder = "คุณ (ผู้เล่น)";
+      state.playerIsHighest = true;
+
+      renderAuctionBidState();
+      renderBotsList();
+      setFeedback("info", `🔨 คุณเสนอราคา ${nextPrice} เหรียญสำหรับ "${item.title}"! รอดูว่าคู่แข่งจะสู้ราคาหรือไม่...`);
+    }
+
+    function simulateBotBid(item, lvl) {
+      if (state.timeLeft <= 2) return;
+      // เลือกบอทที่สนใจกิจกรรมประเภทนี้และยังมีเหรียญพอ
+      const nextPrice = state.highestBidder === "ราคาเริ่มต้น" ? state.currentBid : state.currentBid + 1;
+      const maxWilling = item.basePrice + (item.slots === 1 ? 3 : 2);
+      if (nextPrice > maxWilling) return;
+
+      const eligibleBots = lvl.bots.filter(b => b.coins >= nextPrice && state.highestBidder !== b.name);
+      if (eligibleBots.length === 0) return;
+
+      // โอกาส 55% ที่บอทจะเคาะราคาเพิ่ม
+      if (Math.random() < 0.55) {
+        const bot = eligibleBots[Math.floor(Math.random() * eligibleBots.length)];
+        state.currentBid = nextPrice;
+        state.highestBidder = bot.name;
+        state.playerIsHighest = false;
+        renderAuctionBidState();
+        renderBotsList();
+        setFeedback("info", `📢 ${bot.name} เคาะราคาแข่งที่ ${nextPrice} เหรียญ!`);
+      }
+    }
+
+    function passCurrentAuction() {
+      const lvl = getCurrentLevelData();
+      const item = lvl.items[state.itemIndex];
+      state.totalDecisions++;
+      if (!item.isGood) {
+        state.goodDecisions++;
+        state.score += 3;
+        setFeedback("good", `👏 ฉลาดมาก! คุณเลือกข้าม "${item.title}" ทำให้ประหยัดเวลาไว้ใช้กับเรื่องสำคัญ (+3 คะแนน)`);
+      } else {
+        setFeedback("info", `⏭️ คุณเลือกผ่าน "${item.title}" เพื่อเก็บเหรียญไว้รอกิจกรรมอื่น`);
+      }
+      state.itemIndex++;
+      updateHUD();
+      setTimeout(loadAuctionRound, 900);
+    }
+
+    function resolveCurrentAuction() {
+      clearAllTimers();
+      const lvl = getCurrentLevelData();
+      const item = lvl.items[state.itemIndex];
+      state.totalDecisions++;
+
+      if (state.playerIsHighest && state.coins >= state.currentBid) {
+        // ผู้เล่นชนะการประมูล!
+        SFX.gavel();
+        state.coins -= state.currentBid;
+        state.wonItems.push({ ...item, paid: state.currentBid });
+        state.score += item.points;
+
+        state.vitals.health += item.effects.health;
+        state.vitals.study += item.effects.study;
+        state.vitals.happy += item.effects.happy;
+
+        if (item.isGood) {
+          state.goodDecisions++;
+          spawnFloatingEmoji(item.icon);
+          setFeedback("good", `🎉 ปิดประมูล! คุณได้ "${item.title}" (${state.currentBid} เหรียญ) พลังชีวิตเพิ่มขึ้นอย่างสมดุล!`);
+        } else {
+          spawnFloatingEmoji("⚠️");
+          setFeedback("warn", `😅 คุณประมูล "${item.title}" ไป ${state.currentBid} เหรียญ — ระวังเสียค่าเสียโอกาสในการทำสิ่งสำคัญ!`);
+        }
+      } else {
+        // บอทได้ไป
+        const winnerBot = lvl.bots.find(b => b.name === state.highestBidder);
+        if (winnerBot) winnerBot.coins = Math.max(0, winnerBot.coins - state.currentBid);
+        if (!item.isGood) state.goodDecisions++;
+        setFeedback("info", `🔨 ปิดประมูล! ${state.highestBidder === "ราคาเริ่มต้น" ? "ไม่มีผู้ประมูลรายการนี้" : state.highestBidder + " ชนะรายการนี้ไป"}`);
+      }
+
+      updateHUD();
+
+      // ตรวจสอบเงื่อนไขแพ้ทันทีหากพลังชีวิตลดลงเหลือ 0
+      if (checkImmediateGameOver()) return;
+
+      state.itemIndex++;
+      setTimeout(loadAuctionRound, 1300);
+    }
+
+    function spawnFloatingEmoji(symbol) {
+      const el = document.createElement("div");
+      el.className = "floating-reward";
+      el.textContent = symbol;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1450);
+    }
+
+    function setFeedback(type, msg) {
+      const box = document.getElementById("auction-feedback");
+      box.className = `feedback-banner ${type === "warn" ? "warn" : type === "good" ? "good" : ""}`;
+      document.getElementById("feedback-text").textContent = msg;
+    }
+
+    /* ระบบลากเหรียญวางบนแท่นประมูล (Drag & Drop Coin) */
+    function handleCoinDragStart(e) {
+      e.dataTransfer.setData("text/plain", "bid-coin");
+    }
+    function handleCoinDragOver(e) {
+      e.preventDefault();
+      document.getElementById("podium-dropzone").classList.add("drag-over");
+    }
+    function handleCoinDragLeave() {
+      document.getElementById("podium-dropzone").classList.remove("drag-over");
+    }
+    function handleCoinDrop(e) {
+      e.preventDefault();
+      document.getElementById("podium-dropzone").classList.remove("drag-over");
+      placePlayerBid(1);
+    }
+
+    /* ระบบคำใบ้: ที่ปรึกษาเวลา (Hint System) */
+    function useTimeAdvisor() {
+      if (state.hintUsed) return;
+      state.hintUsed = true;
+      state.score = Math.max(0, state.score - 2);
+      const btn = document.getElementById("btn-hint");
+      btn.disabled = true;
+      btn.textContent = "💡 ใช้คำใบ้แล้ว (-2)";
+      updateHUD();
+
+      const hasSleep = state.wonItems.some(i => i.id === "sleep8" || i.id === "nap_power");
+      let advice = "";
+      if (!hasSleep) {
+        advice = "🐶 คำแนะนำจากน้องหมา: คุณยังไม่มีการ์ด 'นอนหลับ/พักสายตา' เลย! ควรเก็บเหรียญไว้ประมูลการนอนเพื่อป้องกันการล้มป่วยท้ายวัน";
+      } else if (state.vitals.study < 55) {
+        advice = "🐶 คำแนะนำจากน้องหมา: ด้าน 'การเรียน' ยังต่ำอยู่ ลองมองหากิจกรรมหมวด 'สำคัญ' อย่างการตั้งใจเรียนหรืออ่านหนังสือนะ";
+      } else if (state.vitals.health < 55 || state.vitals.happy < 55) {
+        advice = "🐶 คำแนะนำจากน้องหมา: อย่าลืมเติมพลังด้าน 'สุขภาพหรือครอบครัว' เพื่อรักษาสมดุล 8-8-8 ให้ครบทุกด้าน!";
+      } else {
+        advice = "🐶 คำแนะนำจากน้องหมา: สมดุลชีวิตของคุณยอดเยี่ยมมาก! หลีกเลี่ยงการ์ดสีเทา (ไถโซเชียล/ดูซีรีส์) เพื่อรักษาคะแนนสูงสุดไว้";
+      }
+      SFX.coin();
+      setFeedback("good", advice);
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 7: ขั้นตอนที่ 2 - จัดตารางสมดุล 8-8-8 (DRAG & DROP / TAP PLANNER)
+       ========================================================================== */
+    function startPlannerPhase() {
+      clearAllTimers();
+      if (state.wonItems.length === 0) {
+        // กรณีผู้เล่นไม่ประมูลอะไรเลย ข้ามไปเหตุการณ์ท้ายวันทันที
+        startTwistPhase();
+        return;
+      }
+      switchScreen("screen-planner");
+      renderPlannerBoard();
+    }
+
+    function renderPlannerBoard() {
+      const tray = document.getElementById("unassigned-tray");
+      const zones = {
+        rest: document.getElementById("zone-rest-items"),
+        work: document.getElementById("zone-work-items"),
+        life: document.getElementById("zone-life-items")
+      };
+
+      tray.innerHTML = "";
+      Object.values(zones).forEach(z => z.innerHTML = "");
+
+      state.wonItems.forEach(item => {
+        const assignedZone = state.plannerAssignments[item.id];
+        const cardEl = document.createElement("div");
+        cardEl.className = `plan-card ${state.selectedPlanCardId === item.id ? "selected-card" : ""}`;
+        cardEl.draggable = true;
+        cardEl.innerHTML = `${item.icon} ${item.title} (${item.hours} ชม.)`;
+
+        cardEl.ondragstart = (e) => {
+          e.dataTransfer.setData("text/plain", item.id);
+        };
+        cardEl.onclick = (e) => {
+          e.stopPropagation();
+          state.selectedPlanCardId = (state.selectedPlanCardId === item.id) ? null : item.id;
+          SFX.coin();
+          renderPlannerBoard();
+        };
+
+        if (assignedZone && zones[assignedZone]) {
+          zones[assignedZone].appendChild(cardEl);
+        } else {
+          tray.appendChild(cardEl);
+        }
+      });
+
+      if (tray.children.length === 0) {
+        tray.innerHTML = `<span style="color:#16a34a; font-weight:700; font-size:0.88rem;">✅ จัดกิจกรรมทั้งหมดลงตารางเรียบร้อยแล้ว!</span>`;
+      }
+    }
+
+    function handleZoneDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add("drag-over");
+    }
+    function handleZoneDragLeave(e) {
+      e.currentTarget.classList.remove("drag-over");
+    }
+    function handleZoneDrop(e, zoneName) {
+      e.preventDefault();
+      e.currentTarget.classList.remove("drag-over");
+      const itemId = e.dataTransfer.getData("text/plain");
+      if (itemId) {
+        assignCardToZone(itemId, zoneName);
+      }
+    }
+    function handleZoneTap(zoneName) {
+      if (state.selectedPlanCardId) {
+        assignCardToZone(state.selectedPlanCardId, zoneName);
+        state.selectedPlanCardId = null;
+      }
+    }
+
+    function assignCardToZone(itemId, zoneName) {
+      state.plannerAssignments[itemId] = zoneName;
+      SFX.coin();
+      renderPlannerBoard();
+    }
+
+    function autoAssignPlanner() {
+      state.wonItems.forEach(it => {
+        state.plannerAssignments[it.id] = it.zone;
+      });
+      SFX.gavel();
+      renderPlannerBoard();
+    }
+
+    function finishPlannerPhase() {
+      // คำนวณโบนัสจากการจัดวางตรงโซน 8-8-8
+      let correctZoneCount = 0;
+      state.wonItems.forEach(it => {
+        if (state.plannerAssignments[it.id] === it.zone) {
+          correctZoneCount++;
+        }
+      });
+      if (correctZoneCount > 0) {
+        state.score += correctZoneCount * 2;
+      }
+      startTwistPhase();
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 8: ขั้นตอนที่ 3 - เหตุการณ์ไม่คาดฝัน (INTERACTIVE PLOT TWIST)
+       ========================================================================== */
+    function startTwistPhase() {
+      const lvl = getCurrentLevelData();
+      const twist = lvl.twists[0];
+      SFX.alert();
+      switchScreen("screen-twist");
+
+      document.getElementById("twist-title").textContent = twist.title;
+      document.getElementById("twist-desc").textContent = twist.desc;
+
+      const hasShield = state.wonItems.some(it => it.id === twist.shieldId);
+      const shieldEl = document.getElementById("twist-shield-status");
+
+      if (hasShield) {
+        shieldEl.className = "feedback-banner good";
+        shieldEl.innerHTML = `<span>🛡️</span><span>${twist.shieldMsg}</span>`;
+      } else {
+        shieldEl.className = "feedback-banner warn";
+        shieldEl.innerHTML = `<span>💥</span><span>${twist.noShieldMsg}</span>`;
+        state.vitals.health = Math.max(0, state.vitals.health + twist.noShieldPenalty.health);
+        state.vitals.study = Math.max(0, state.vitals.study + twist.noShieldPenalty.study);
+        state.vitals.happy = Math.max(0, state.vitals.happy + twist.noShieldPenalty.happy);
+        state.score = Math.max(0, state.score + twist.noShieldPenalty.score);
+      }
+
+      const choicesEl = document.getElementById("twist-choices");
+      choicesEl.innerHTML = twist.choices.map((ch, idx) => `
+        <button class="choice-btn" onclick="resolveTwistChoice(${idx})">${ch.text}</button>
+      `).join("");
+    }
+
+    function resolveTwistChoice(choiceIdx) {
+      const lvl = getCurrentLevelData();
+      const twist = lvl.twists[0];
+      const choice = twist.choices[choiceIdx];
+
+      state.vitals.health = Math.max(0, Math.min(100, state.vitals.health + choice.delta.health));
+      state.vitals.study = Math.max(0, Math.min(100, state.vitals.study + choice.delta.study));
+      state.vitals.happy = Math.max(0, Math.min(100, state.vitals.happy + choice.delta.happy));
+      state.score = Math.max(0, state.score + choice.delta.score);
+
+      state.totalDecisions++;
+      if (choice.delta.score > 0) state.goodDecisions++;
+
+      showFinalDashboard(choice.feedback);
+    }
+
+    function checkImmediateGameOver() {
+      if (state.vitals.health <= 0 || state.vitals.study <= 0 || state.vitals.happy <= 0) {
+        clearAllTimers();
+        SFX.fail();
+        showFinalDashboard("พลังชีวิตด้านหนึ่งลดลงเหลือ 0% ระหว่างวัน! อย่าทุ่มเวลาให้ด้านเดียวจนละเลยพื้นฐานชีวิตนะ", true);
+        return true;
+      }
+      return false;
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 9: หน้าสรุปผล & SVG LIFE PIE CHART DASHBOARD
+       ========================================================================== */
+    function showFinalDashboard(twistFeedback, forcedFail = false) {
+      switchScreen("screen-result");
+
+      const isGameOver = forcedFail || state.vitals.health <= 0 || state.vitals.study <= 0 || state.vitals.happy <= 0;
+
+      // คำนวณโบนัสสมดุลครบ 3 ด้าน (8-8-8 Balance Bonus)
+      const zonesUsed = new Set(state.wonItems.filter(i => i.isGood).map(i => i.zone));
+      if (!isGameOver && zonesUsed.size === 3) {
+        state.score += 8;
+      }
+
+      const accuracyRate = state.totalDecisions > 0
+        ? Math.round((state.goodDecisions / state.totalDecisions) * 100)
+        : 0;
+
+      // บันทึก High Score และปลดล็อกด่านถัดไป
+      const prevHigh = saveData.highScores[state.selectedLevel] || 0;
+      if (state.score > prevHigh) {
+        saveData.highScores[state.selectedLevel] = state.score;
+      }
+      if (!isGameOver && state.selectedLevel < 3 && saveData.unlockedLevel <= state.selectedLevel) {
+        saveData.unlockedLevel = state.selectedLevel + 1;
+      }
+      persistSaveData();
+
+      // กำหนดฉายาประจำวัน
+      let titleBadge = "นักบริหารเวลาฝึกหัด";
+      const totalDistractHrs = state.wonItems.filter(i => !i.isGood).reduce((s, i) => s + i.hours, 0);
+      const totalStudyHrs = state.wonItems.filter(i => i.zone === "work").reduce((s, i) => s + i.hours, 0);
+      const totalRestHrs = state.wonItems.filter(i => i.zone === "rest").reduce((s, i) => s + i.hours, 0);
+
+      if (isGameOver) {
+        titleBadge = "ชาวฟาร์มผู้หมดแรง (ต้องจัดสมดุลใหม่!)";
+        SFX.fail();
+      } else if (zonesUsed.size === 3 && totalDistractHrs === 0 && state.score >= 45) {
+        titleBadge = "ปรมาจารย์ฟาร์มสมดุลทองคำ 🏆";
+        SFX.victory();
+      } else if (totalDistractHrs >= 5) {
+        titleBadge = "ชาวฟาร์มนักไถจอ (ระวังกับดักเวลา!)";
+        SFX.victory();
+      } else if (totalStudyHrs >= 10 && totalRestHrs < 6) {
+        titleBadge = "เจ้าฟาร์มผู้ขยันขันแข็ง (อย่าลืมพักผ่อนนะ!)";
+        SFX.victory();
+      } else if (totalRestHrs >= 8 && totalStudyHrs === 0) {
+        titleBadge = "เจ้าฟาร์มขี้เซาจอมพักผ่อน 😴";
+        SFX.victory();
+      } else {
+        titleBadge = "ชาวฟาร์มนักจัดสรรเวลา 🌻";
+        SFX.victory();
+      }
+
+      document.getElementById("result-badge-icon").textContent = isGameOver ? "💫" : "🏆";
+      document.getElementById("result-heading").textContent = isGameOver
+        ? "จบวันก่อนกำหนด! มาทบทวนบทเรียนกันเถอะ"
+        : "สรุปผลภารกิจบริหารเวลา 24 ชั่วโมง!";
+      document.getElementById("result-title-badge").textContent = titleBadge;
+
+      const stars = isGameOver ? "⭐" : (state.score >= 48 ? "⭐⭐⭐" : state.score >= 30 ? "⭐⭐" : "⭐");
+      document.getElementById("result-stars").textContent = stars;
+
+      document.getElementById("final-score").textContent = state.score;
+      document.getElementById("final-accuracy").textContent = `${accuracyRate}%`;
+      document.getElementById("final-highscore").textContent = saveData.highScores[state.selectedLevel];
+
+      const nextBtn = document.getElementById("btn-next-level");
+      nextBtn.style.display = (!isGameOver && state.selectedLevel < 3) ? "inline-flex" : "none";
+
+      // วาดแผนภาพวงกลมชีวิต 24 ชั่วโมง (SVG Pie Chart)
+      renderLifePieChart(totalRestHrs, totalStudyHrs, totalDistractHrs);
+
+      // สร้างข้อเสนอแนะรายบุคคล
+      const feedbackList = [];
+      feedbackList.push(`<strong>ผลจากเหตุการณ์ท้ายวัน:</strong> ${twistFeedback}`);
+      if (totalRestHrs < 6) {
+        feedbackList.push("🛏️ <strong>ด้านการพักผ่อน:</strong> คุณจัดเวลาพักผ่อนน้อยกว่า 6 ชม. การอดนอนส่งผลเสียต่อความจำและภูมิคุ้มกันโดยตรง");
+      } else {
+        feedbackList.push("🛏️ <strong>ด้านการพักผ่อน:</strong> ยอดเยี่ยม! คุณเห็นความสำคัญของการนอนหลับพักผ่อนอย่างเพียงพอ");
+      }
+      if (totalDistractHrs > 0) {
+        feedbackList.push(`📱 <strong>ด้านการรู้เท่าทันสื่อ (Digital Literacy):</strong> คุณเสียเวลา ${totalDistractHrs} ชม. ไปกับกิจกรรมที่ไม่มีเป้าหมาย ลองลดเวลาส่วนนี้เพื่อเพิ่มโอกาสพัฒนาตนเอง`);
+      }
+      if (zonesUsed.size === 3) {
+        feedbackList.push("⚖️ <strong>สูตรสมดุล 8-8-8:</strong> คุณจัดสรรเวลาได้ครบทั้ง 3 ด้าน (พักผ่อน / เรียน / สุขภาพและความสัมพันธ์) ได้รับโบนัสสมดุลชีวิต!");
+      } else {
+        feedbackList.push("⚖️ <strong>สูตรสมดุล 8-8-8:</strong> ลองวางแผนให้มีกิจกรรมครบทั้ง 3 ด้านในรอบถัดไป เพื่อสร้างเกราะป้องกันความเครียด");
+      }
+
+      document.getElementById("personal-feedback-list").innerHTML = feedbackList.map(item => `<li>${item}</li>`).join("");
+    }
+
+    function renderLifePieChart(restHrs, studyHrs, distractHrs) {
+      const lifeGoodHrs = state.wonItems
+        .filter(i => i.zone === "life" && i.isGood)
+        .reduce((s, i) => s + i.hours, 0);
+      const usedTotal = restHrs + studyHrs + lifeGoodHrs + distractHrs;
+      const wastedHrs = Math.max(0, 24 - usedTotal);
+
+      const segments = [
+        { label: "พักผ่อนนอนหลับ", hours: restHrs, color: "#3b82f6" },
+        { label: "เรียน & พัฒนาตนเอง", hours: studyHrs, color: "#22c55e" },
+        { label: "สุขภาพ & ครอบครัว", hours: lifeGoodHrs, color: "#f59e0b" },
+        { label: "สิ่งล่อใจ / โซเชียล", hours: distractHrs, color: "#ef4444" },
+        { label: "เวลาที่ปล่อยทิ้งเปล่า", hours: wastedHrs, color: "#cbd5e1" }
+      ];
+
+      const svg = document.getElementById("life-pie-svg");
+      const cx = 105, cy = 105, r = 82;
+      let cumulativeAngle = -Math.PI / 2;
+      let pathsHtml = "";
+
+      segments.forEach(seg => {
+        if (seg.hours <= 0) return;
+        const sliceAngle = (seg.hours / 24) * Math.PI * 2;
+        if (seg.hours >= 24) {
+          pathsHtml += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${seg.color}"/>`;
+        } else {
+          const x1 = cx + r * Math.cos(cumulativeAngle);
+          const y1 = cy + r * Math.sin(cumulativeAngle);
+          const endAngle = cumulativeAngle + sliceAngle;
+          const x2 = cx + r * Math.cos(endAngle);
+          const y2 = cy + r * Math.sin(endAngle);
+          const largeArc = sliceAngle > Math.PI ? 1 : 0;
+          pathsHtml += `<path d="M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z" fill="${seg.color}" stroke="#ffffff" stroke-width="2"/>`;
+          cumulativeAngle = endAngle;
+        }
+      });
+
+      // วงกลมตรงกลางแบบ Donut Chart
+      pathsHtml += `<circle cx="${cx}" cy="${cy}" r="38" fill="#ffffff"/>`;
+      pathsHtml += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="14" font-weight="900" fill="#1e293b">24 ชม.</text>`;
+      svg.innerHTML = pathsHtml;
+
+      document.getElementById("pie-legend").innerHTML = segments.map(seg => `
+        <div class="legend-item">
+          <span><span class="dot" style="background:${seg.color};"></span>${seg.label}</span>
+          <strong>${seg.hours} ชม.</strong>
+        </div>
+      `).join("");
+    }
+
+    function playNextLevel() {
+      if (state.selectedLevel < 3) {
+        state.selectedLevel++;
+        startGame();
+      }
+    }
+
+    /* ==========================================================================
+       ส่วนที่ 10: การควบคุมหน้าต่าง Modal (วิธีเล่น / คลังความรู้ / สถิติ)
+       ========================================================================== */
+    function openModal(id) {
+      if (id === "modal-scores") renderHighScoreTable();
+      document.getElementById(id).classList.add("open");
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("open");
+    }
+    function closeModalOnBg(e, id) {
+      if (e.target.id === id) closeModal(id);
+    }
+
+    function renderHighScoreTable() {
+      const container = document.getElementById("highscore-table-container");
+      container.innerHTML = GAME_CONFIG.levels.map(lvl => `
+        <div style="display:flex; justify-content:space-between; padding:12px; background:#fffbeb; border-radius:12px; border:1px solid #fde68a; margin-bottom:8px;">
+          <strong>${lvl.name}</strong>
+          <span style="font-weight:900; color:#b45309;">🏆 ${saveData.highScores[lvl.id] || 0} คะแนน</span>
+        </div>
+      `).join("");
+    }
+
+    // เริ่มต้นระบบเมื่อโหลดหน้าเว็บเสร็จสมบูรณ์
+    window.addEventListener("DOMContentLoaded", () => {
+      initStartScreen();
+    });
+  </script>
+</body>
+</html>
